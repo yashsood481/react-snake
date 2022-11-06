@@ -43,7 +43,23 @@ const GameTile = () => {
         return;
     }
   };
+  const getRandomGridTile = (gridSize) => {
+    return Math.floor(Math.random() * gridSize + 1);
+  };
   const [currentPos, dispatch] = useReducer(posReducer, initialPosState);
+  const [eggPosRow, setEggPosRow] = useState(getRandomGridTile(MATRIX_SIZE));
+  const [eggPosCol, setEggPosCol] = useState(getRandomGridTile(MATRIX_SIZE));
+
+  const setNewEggPostion = () => {
+    setEggPosCol(getRandomGridTile(MATRIX_SIZE));
+    setEggPosRow(getRandomGridTile(MATRIX_SIZE));
+  };
+
+  useEffect(() => {
+    if (currentPos.row === eggPosRow && currentPos.col === eggPosCol) {
+      setNewEggPostion();
+    }
+  }, [currentPos, eggPosRow, eggPosCol]);
 
   // creating tiles
   let totalTiles = 0;
@@ -51,7 +67,14 @@ const GameTile = () => {
     for (let j = 1; j <= MATRIX_SIZE; j++) {
       totalTiles++;
       tiles.push(
-        <Tile key={totalTiles} row={i} col={j} currentPos={currentPos} />
+        <Tile
+          key={totalTiles}
+          row={i}
+          col={j}
+          currentPos={currentPos}
+          eggPosRow={eggPosRow}
+          eggPosCol={eggPosCol}
+        />
       );
     }
   }
