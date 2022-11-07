@@ -1,41 +1,77 @@
 import React, { useEffect, useReducer, useState } from "react";
 import Tile from "./Tile";
 
-const MATRIX_SIZE = 40;
+const MATRIX_SIZE = 20;
 
-const GameTile = () => {
+const GameTile = ({ setAppState }) => {
   const tiles = [];
-  const initialPosState = {
-    row: 1,
-    col: 1,
-    dir: "right",
+  const initialSnakeArray = [
+    {
+      row: 1,
+      col: 1,
+    },
+  ];
+  const getRandomGridTile = (gridSize) => {
+    return Math.floor(Math.random() * gridSize + 1);
   };
-  const posReducer = (state, action) => {
+  const setNewEggPostion = () => {
+    setEggPosCol(getRandomGridTile(MATRIX_SIZE));
+    setEggPosRow(getRandomGridTile(MATRIX_SIZE));
+  };
+  const reset = () => {
+    setScore(0);
+    setCurrentDir("right");
+    return initialSnakeArray;
+  };
+  const [currentDir, setCurrentDir] = useState("right");
+  const [score, setScore] = useState(0);
+  const [eggPosRow, setEggPosRow] = useState(getRandomGridTile(MATRIX_SIZE));
+  const [eggPosCol, setEggPosCol] = useState(getRandomGridTile(MATRIX_SIZE));
+
+  const snakePosReducer = (state, action) => {
+    const currentSnake = [...state];
+    const snakeHead = currentSnake[0];
+    const snakeTail = currentSnake.pop();
+    const didEatApple =
+      snakeHead.row === eggPosRow && snakeHead.col === eggPosCol;
+    if (didEatApple) {
+      setNewEggPostion();
+      setScore((score) => score + 1);
+      currentSnake.push(snakeTail);
+    }
     switch (action.type) {
       case "left":
-        if (state.col - 1 < 1) return { ...initialPosState };
-        return { row: state.row, col: state.col - 1, dir: "left" };
+        if (snakeHead.col - 1 < 1) {
+          return reset();
+        }
+        currentSnake.unshift({ row: snakeHead.row, col: snakeHead.col - 1 });
+        setCurrentDir("left");
+        return currentSnake;
+
       case "right":
-        if (state.col + 1 > MATRIX_SIZE) return { ...initialPosState };
-        return { row: state.row, col: state.col + 1, dir: "right" };
+        if (snakeHead.col + 1 > MATRIX_SIZE) {
+          setCurrentDir("right");
+          return reset();
+        }
+        currentSnake.unshift({ row: snakeHead.row, col: snakeHead.col + 1 });
+        setCurrentDir("right");
+        return currentSnake;
       case "up":
-        if (state.row - 1 < 1) return { ...initialPosState };
-        return { row: state.row - 1, col: state.col, dir: "up" };
+        if (snakeHead.row - 1 < 1) {
+          setCurrentDir("right");
+          return reset();
+        }
+        currentSnake.unshift({ row: snakeHead.row - 1, col: snakeHead.col });
+        setCurrentDir("up");
+        return currentSnake;
       case "down":
-        if (state.row + 1 > MATRIX_SIZE) return { ...initialPosState };
-        return { row: state.row + 1, col: state.col, dir: "down" };
-      case "ArrowLeft":
-        return { row: state.row, col: state.col, dir: "left" };
-        break;
-      case "ArrowRight":
-        return { row: state.row, col: state.col, dir: "right" };
-        break;
-      case "ArrowUp":
-        return { row: state.row, col: state.col, dir: "up" };
-        break;
-      case "ArrowDown":
-        return { row: state.row, col: state.col, dir: "down" };
-        break;
+        if (snakeHead.row + 1 > MATRIX_SIZE) {
+          setCurrentDir("right");
+          return reset();
+        }
+        currentSnake.unshift({ row: snakeHead.row + 1, col: snakeHead.col });
+        setCurrentDir("down");
+        return currentSnake;
       case "reset": {
         return { ...initialPosState };
       }
@@ -43,23 +79,10 @@ const GameTile = () => {
         return;
     }
   };
-  const getRandomGridTile = (gridSize) => {
-    return Math.floor(Math.random() * gridSize + 1);
-  };
-  const [currentPos, dispatch] = useReducer(posReducer, initialPosState);
-  const [eggPosRow, setEggPosRow] = useState(getRandomGridTile(MATRIX_SIZE));
-  const [eggPosCol, setEggPosCol] = useState(getRandomGridTile(MATRIX_SIZE));
-
-  const setNewEggPostion = () => {
-    setEggPosCol(getRandomGridTile(MATRIX_SIZE));
-    setEggPosRow(getRandomGridTile(MATRIX_SIZE));
-  };
-
-  useEffect(() => {
-    if (currentPos.row === eggPosRow && currentPos.col === eggPosCol) {
-      setNewEggPostion();
-    }
-  }, [currentPos, eggPosRow, eggPosCol]);
+  const [snakePosArray, dispatch] = useReducer(
+    snakePosReducer,
+    initialSnakeArray
+  );
 
   // creating tiles
   let totalTiles = 0;
@@ -71,7 +94,7 @@ const GameTile = () => {
           key={totalTiles}
           row={i}
           col={j}
-          currentPos={currentPos}
+          currentPos={snakePosArray}
           eggPosRow={eggPosRow}
           eggPosCol={eggPosCol}
         />
@@ -86,34 +109,35 @@ const GameTile = () => {
 
   // set game tick rate
   useEffect(() => {
-    const gameInterval = setInterval(
-      () => directionHandler(currentPos.dir),
-      100
-    );
+    const gameInterval = setInterval(() => {
+      directionHandler(currentDir);
+    }, 100);
 
     return () => {
       clearInterval(gameInterval);
     };
   });
 
+  //handle movement keys
   const keyPressedHandler = (e) => {
     switch (e.key) {
       case "ArrowLeft":
-        dispatch({ type: "ArrowLeft" });
+        setCurrentDir("left");
         break;
       case "ArrowRight":
-        dispatch({ type: "ArrowRight" });
+        setCurrentDir("right");
         break;
       case "ArrowUp":
-        dispatch({ type: "ArrowUp" });
+        setCurrentDir("up");
         break;
       case "ArrowDown":
-        dispatch({ type: "ArrowDown" });
+        setCurrentDir("down");
         break;
       default:
     }
   };
 
+  // trigger snake position based on dir
   const directionHandler = (input) => {
     switch (input) {
       case "left":
@@ -142,7 +166,7 @@ const GameTile = () => {
   }, [MATRIX_SIZE]);
   return (
     <div className="grid-container w-fit h-fit">
-      {currentPos.row} / {currentPos.col}
+      {score}
       <div className="my-grid">{tiles}</div>
     </div>
   );
