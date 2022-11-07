@@ -1,4 +1,5 @@
 import React, { useEffect, useReducer, useState } from "react";
+import GameOver from "./GameOver";
 import Tile from "./Tile";
 
 const MATRIX_SIZE = 20;
@@ -19,10 +20,19 @@ const GameTile = ({ setAppState }) => {
     setEggPosRow(getRandomGridTile(MATRIX_SIZE));
   };
   const reset = () => {
-    setScore(0);
-    setCurrentDir("right");
+    setGameOver(true);
     return initialSnakeArray;
   };
+  const didSnakeCollideWithItself = (snakeArray) => {
+    const copiedArray = [...snakeArray];
+    const updatedSnakeHead = copiedArray[0];
+    copiedArray.shift();
+    return copiedArray.some(
+      (pos) =>
+        pos.row === updatedSnakeHead.row && pos.col === updatedSnakeHead.col
+    );
+  };
+  const [gameOver, setGameOver] = useState(false);
   const [currentDir, setCurrentDir] = useState("right");
   const [score, setScore] = useState(0);
   const [eggPosRow, setEggPosRow] = useState(getRandomGridTile(MATRIX_SIZE));
@@ -45,36 +55,37 @@ const GameTile = ({ setAppState }) => {
           return reset();
         }
         currentSnake.unshift({ row: snakeHead.row, col: snakeHead.col - 1 });
+        if (didSnakeCollideWithItself(currentSnake)) return reset();
         setCurrentDir("left");
         return currentSnake;
 
       case "right":
         if (snakeHead.col + 1 > MATRIX_SIZE) {
-          setCurrentDir("right");
           return reset();
         }
         currentSnake.unshift({ row: snakeHead.row, col: snakeHead.col + 1 });
+        if (didSnakeCollideWithItself(currentSnake)) return reset();
+
         setCurrentDir("right");
         return currentSnake;
       case "up":
         if (snakeHead.row - 1 < 1) {
-          setCurrentDir("right");
           return reset();
         }
         currentSnake.unshift({ row: snakeHead.row - 1, col: snakeHead.col });
+        if (didSnakeCollideWithItself(currentSnake)) return reset();
+
         setCurrentDir("up");
         return currentSnake;
       case "down":
         if (snakeHead.row + 1 > MATRIX_SIZE) {
-          setCurrentDir("right");
           return reset();
         }
         currentSnake.unshift({ row: snakeHead.row + 1, col: snakeHead.col });
+        if (didSnakeCollideWithItself(currentSnake)) return reset();
+
         setCurrentDir("down");
         return currentSnake;
-      case "reset": {
-        return { ...initialPosState };
-      }
       default:
         return;
     }
@@ -102,21 +113,23 @@ const GameTile = ({ setAppState }) => {
     }
   }
 
-  // listen for keystroke
   useEffect(() => {
+    if (gameOver) {
+      setCurrentDir("right");
+      return;
+    }
+    // listen for keystroke
     document.addEventListener("keydown", keyPressedHandler, true);
-  }, []);
-
-  // set game tick rate
-  useEffect(() => {
+    // set game tick rate
     const gameInterval = setInterval(() => {
       directionHandler(currentDir);
     }, 100);
 
     return () => {
       clearInterval(gameInterval);
+      document.removeEventListener("keydown", () => {});
     };
-  });
+  }, [currentDir, gameOver]);
 
   //handle movement keys
   const keyPressedHandler = (e) => {
@@ -166,8 +179,16 @@ const GameTile = ({ setAppState }) => {
   }, [MATRIX_SIZE]);
   return (
     <div className="grid-container w-fit h-fit">
-      {score}
-      <div className="my-grid">{tiles}</div>
+      {!gameOver && score}
+      {!gameOver && <div className="my-grid">{tiles}</div>}
+      {gameOver && (
+        <GameOver
+          score={score}
+          setScore={setScore}
+          setGameOver={setGameOver}
+          setAppState={setAppState}
+        />
+      )}
     </div>
   );
 };
